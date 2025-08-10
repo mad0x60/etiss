@@ -223,9 +223,10 @@ void *LLVMJIT::translate(std::string code, std::set<std::string> headerpaths, st
     }
     else
     {
-        args.push_back("-O3");
+        args.push_back("-O0");
     }
     args.push_back("-std=c99");
+    args.push_back("-w"); // supress warnings
     args.push_back("-isystem" + etiss::jitFiles() + "/clang_stdlib");
     args.push_back("-isystem/usr/include");
     for (const auto &headerPath : headerpaths)
@@ -259,6 +260,9 @@ void *LLVMJIT::translate(std::string code, std::set<std::string> headerpaths, st
         error = "error on parsing args";
         return 0;
     }
+
+    // Forcefully suppress all warnings directly in the diagnostics engine.
+    CI.getDiagnostics().setIgnoreAllWarnings(true);
 
     // input file is mapped to memory area containing the code
     auto buffer = MemoryBuffer::getMemBufferCopy(code, "/etiss_llvm_clang_memory_mapped_file.c");

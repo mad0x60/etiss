@@ -117,7 +117,7 @@ void *GCCJIT::translate(std::string code, std::set<std::string> headerpaths, std
     if (debug)
         ss << "-g -O0 ";
     else
-        ss << "-Ofast ";
+        ss << "-O0 ";
     for (std::set<std::string>::const_iterator iter = headerpaths.begin(); iter != headerpaths.end(); iter++)
     {
         ss << "-I\"" << *iter << "\" ";

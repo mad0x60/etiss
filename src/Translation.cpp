@@ -394,7 +394,7 @@ BlockLink *Translation::getBlock(BlockLink *prev, const etiss::uint64 &instructi
     */
 
 #ifndef ETISS_DEBUG
-#define ETISS_DEBUG 1
+#define ETISS_DEBUG 0
 #endif
     // compile library
     void *funcs =
