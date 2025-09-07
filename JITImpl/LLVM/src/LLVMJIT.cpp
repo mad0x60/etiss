@@ -223,7 +223,7 @@ void *LLVMJIT::translate(std::string code, std::set<std::string> headerpaths, st
     }
     else
     {
-        args.push_back("-O0");
+        args.push_back("-O3");
     }
     args.push_back("-std=c99");
     args.push_back("-w"); // supress warnings
@@ -261,7 +261,7 @@ void *LLVMJIT::translate(std::string code, std::set<std::string> headerpaths, st
         return 0;
     }
 
-    // Forcefully suppress all warnings directly in the diagnostics engine.
+    //  suppress all warnings directly in the diagnostics engine.
     CI.getDiagnostics().setIgnoreAllWarnings(true);
 
     // input file is mapped to memory area containing the code
