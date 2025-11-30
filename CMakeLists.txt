@@ -61,6 +61,7 @@ option(ETISS_BUILD_MANUAL_DOC "If enabled then the documentation will not be bui
 option(ETISS_BUILD_DEFAULTSUB "If enabled then the ArchImpl,JITImpl,PluginImpl and projects folder will be added as subfolders. Please have a look at the CMakeLists.txt files of those folders for further information" ON)
 option(ETISS_USE_PROFILEFLAGS "Enable or disable the -pg compiler and linker flags." OFF)
 option(ETISS_USE_COREDSL_COVERAGE "Enable the CoreDSL coverage analyzer" OFF)
+option(ETISS_TRANSLATOR_STAT "Enable translator statistics (cache hits/misses)" OFF)
 
 # Global configuration
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -109,6 +110,10 @@ ENDIF()
 
 IF(ETISS_USE_COREDSL_COVERAGE)
     ADD_DEFINITIONS(-DETISS_USE_COREDSL_COVERAGE)
+ENDIF()
+
+IF(ETISS_TRANSLATOR_STAT)
+    ADD_DEFINITIONS(-DETISS_TRANSLATOR_STAT)
 ENDIF()
 
 # Include modules.

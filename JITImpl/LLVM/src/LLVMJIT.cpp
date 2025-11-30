@@ -219,7 +219,7 @@ void *LLVMJIT::translate(std::string code, std::set<std::string> headerpaths, st
     if (debug)
     {
         args.push_back("-g");
-        args.push_back("-O0");
+        args.push_back("-O3");
     }
     else
     {

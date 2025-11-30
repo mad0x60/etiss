@@ -40,7 +40,10 @@ project(bare_etiss_processor)
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 SET(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
-add_executable(bare_etiss_processor main.cpp)
+add_executable(bare_etiss_processor 
+    main.cpp
+    JITStatsCollector.cpp
+)
 target_link_libraries(bare_etiss_processor ETISS)
 
 set(ETISS_DIR ${CMAKE_INSTALL_PREFIX} )

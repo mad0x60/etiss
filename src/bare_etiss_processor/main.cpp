@@ -42,6 +42,7 @@
 
 #include "TracePrinter.h"
 #include "TimeTracker.h"
+#include "JITStatsCollector.h"
 #include "etiss/SimpleMemSystem.h"
 #include "etiss/ETISS.h"
 
@@ -139,6 +140,13 @@ int main(int argc, const char *argv[])
       std::string out_path = etiss::cfg().get<std::string>("time_tracker.out_path", prefix + "/" + "TimeTracker.log");
 
       cpu->addPlugin(std::shared_ptr<etiss::Plugin>(new TimeTracker(enable_print, out_path, resolution)));
+    }
+    if (etiss::cfg().get<bool>("jit_stats.enable", false)) {
+      bool enable_print = etiss::cfg().get<bool>("jit_stats.print", true);
+      std::string prefix = etiss::cfg().get<std::string>("etiss.output_path_prefix", ".");
+      std::string out_path = etiss::cfg().get<std::string>("jit_stats.out_path", prefix + "/JITStats.log");
+
+      cpu->addPlugin(std::shared_ptr<etiss::Plugin>(new JITStatsCollector(enable_print, out_path)));
     }
 
     std::cout << "=== Setting up plug-ins ===" << std::endl << std::endl;
