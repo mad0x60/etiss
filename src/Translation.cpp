@@ -41,6 +41,7 @@
 */
 
 #include "etiss/Translation.h"
+#include "etiss/ETISS.h"
 #include <mutex>
 
 // Forward declaration for JIT statistics update function
@@ -153,7 +154,8 @@ Translation::Translation(std::shared_ptr<etiss::CPUArch> &arch,
     , optimizingJitBlocks_(0)
     , blocksOptimized_(0)
     , blocksSwitched_(0)
-    , optManager_(std::make_unique<OptimizationManager>(jit))
+    , optManager_(std::make_unique<OptimizationManager>(jit, 
+        static_cast<size_t>(etiss::cfg().get<int>("jit.optimization_threads", 1))))
     , id(genTranslationId())
 {
     tblockcount = 0;
@@ -756,14 +758,35 @@ std::string Translation::disasm(uint8_t *buf, unsigned len, int &append)
 }
 
 // In Translation.cpp
-OptimizationManager::OptimizationManager(std::shared_ptr<etiss::JIT> optimizingJit)
-    : optimizingJit_(optimizingJit)
+OptimizationManager::OptimizationManager(std::shared_ptr<etiss::JIT> optimizingJit, size_t numThreads)
+    : numThreads_(numThreads)
+    , optimizingJit_(optimizingJit)
     , shutdown_(false)
     , activeThreads_(0)
     , onBlockOptimized_(nullptr)
 {
+    // Create a separate JIT instance for each worker thread to enable parallel compilation
+    // This is necessary because LLVM JIT is not thread-safe for concurrent translate() calls
+    std::string jitName = optimizingJit_ ? optimizingJit_->getName() : "";
+    if (!jitName.empty()) {
+        threadJits_.reserve(numThreads_);
+        for (size_t i = 0; i < numThreads_; i++) {
+            std::shared_ptr<etiss::JIT> threadJit = etiss::getJIT(jitName, std::map<std::string, std::string>());
+            if (threadJit) {
+                threadJits_.push_back(threadJit);
+            } else {
+                // Fallback to shared instance if creation fails
+                etiss::log(etiss::WARNING, "Failed to create per-thread JIT instance, using shared instance");
+                threadJits_.push_back(optimizingJit_);
+            }
+        }
+    } else {
+        // If no JIT name, use shared instance for all threads
+        threadJits_.resize(numThreads_, optimizingJit_);
+    }
+    
     // Create worker threads
-    for (size_t i = 0; i < NUM_THREADS; i++) {
+    for (size_t i = 0; i < numThreads_; i++) {
         workerThreads_.emplace_back(&OptimizationManager::optimizationWorker, this, i);
         activeThreads_++;
     }
@@ -812,7 +835,10 @@ void OptimizationManager::optimizationWorker(size_t threadId) {
 
         if (hasTask) {
             std::string error;
-            void* funcs = optimizingJit_->translate(
+            // Use per-thread JIT instance for parallel compilation
+            std::shared_ptr<etiss::JIT> threadJit = (threadId < threadJits_.size()) ? threadJits_[threadId] : optimizingJit_;
+            
+            void* funcs = threadJit->translate(
                 task.code,
                 task.headers,
                 task.libloc,
@@ -822,15 +848,15 @@ void OptimizationManager::optimizationWorker(size_t threadId) {
             );
 
             if (funcs) {
-                // Create library handle with cleanup
+                // Create library handle with cleanup (use same JIT instance that compiled it)
                 auto optimizedLib = std::shared_ptr<void>(
                     funcs,
-                    [jit = optimizingJit_](void* p) { jit->free(p); }
+                    [jit = threadJit](void* p) { jit->free(p); }
                 );
 
-                // Get function pointer
+                // Get function pointer (use same JIT instance that compiled it)
                 ExecBlockCall optimizedExecBlock = 
-                    (ExecBlockCall)optimizingJit_->getFunction(
+                    (ExecBlockCall)threadJit->getFunction(
                         optimizedLib.get(),
                         task.blockFunctionName.c_str(),
                         error
